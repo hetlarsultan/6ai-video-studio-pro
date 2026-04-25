@@ -8,6 +8,13 @@
       "when": 1775600390456,
       "tag": "0000_sticky_rattler",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1777156881080,
+      "tag": "0001_dry_living_lightning",
+      "breakpoints": true
     }
   ]
 }

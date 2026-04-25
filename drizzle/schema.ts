@@ -25,4 +25,83 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * Video Templates Table
+ * Stores pre-built video project templates
+ */
+export const videoTemplates = mysqlTable("videoTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }).notNull(),
+  thumbnail: text("thumbnail"),
+  duration: int("duration").notNull(),
+  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).default("easy"),
+  tags: text("tags"),
+  structure: text("structure"),
+  defaultSettings: text("defaultSettings"),
+  usageCount: int("usageCount").default(0),
+  isPublic: int("isPublic").default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type VideoTemplate = typeof videoTemplates.$inferSelect;
+export type InsertVideoTemplate = typeof videoTemplates.$inferInsert;
+
+/**
+ * User Projects Table
+ */
+export const userProjects = mysqlTable("userProjects", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  templateId: int("templateId"),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  status: mysqlEnum("status", ["draft", "processing", "completed", "failed"]).default("draft"),
+  content: text("content"),
+  settings: text("settings"),
+  outputUrl: text("outputUrl"),
+  duration: int("duration"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserProject = typeof userProjects.$inferSelect;
+export type InsertUserProject = typeof userProjects.$inferInsert;
+
+/**
+ * Template Scenes Table
+ */
+export const templateScenes = mysqlTable("templateScenes", {
+  id: int("id").autoincrement().primaryKey(),
+  templateId: int("templateId").notNull(),
+  sceneIndex: int("sceneIndex").notNull(),
+  sceneType: varchar("sceneType", { length: 100 }).notNull(),
+  duration: int("duration").notNull(),
+  content: text("content"),
+  animation: varchar("animation", { length: 100 }),
+  effects: text("effects"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TemplateScene = typeof templateScenes.$inferSelect;
+export type InsertTemplateScene = typeof templateScenes.$inferInsert;
+
+/**
+ * Template Assets Table
+ */
+export const templateAssets = mysqlTable("templateAssets", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  assetType: varchar("assetType", { length: 100 }).notNull(),
+  url: text("url").notNull(),
+  category: varchar("category", { length: 100 }),
+  duration: int("duration"),
+  metadata: text("metadata"),
+  isPublic: int("isPublic").default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TemplateAsset = typeof templateAssets.$inferSelect;
+export type InsertTemplateAsset = typeof templateAssets.$inferInsert;
