@@ -181,3 +181,126 @@ export const projectHistory = mysqlTable("projectHistory", {
 
 export type ProjectHistory = typeof projectHistory.$inferSelect;
 export type InsertProjectHistory = typeof projectHistory.$inferInsert;
+
+/**
+ * Element Animations/Effects Table
+ * Stores animation and transition effects for elements
+ */
+export const elementAnimations = mysqlTable("elementAnimations", {
+  id: int("id").autoincrement().primaryKey(),
+  elementId: int("elementId").notNull(),
+  projectId: int("projectId").notNull(),
+  animationType: mysqlEnum("animationType", [
+    "fade",
+    "slide",
+    "zoom",
+    "rotate",
+    "bounce",
+    "flip",
+    "swing",
+    "pulse",
+    "shake",
+    "heartbeat",
+    "custom"
+  ]).notNull(),
+  duration: int("duration").notNull().default(1000), // milliseconds
+  delay: int("delay").default(0), // milliseconds
+  easing: mysqlEnum("easing", [
+    "linear",
+    "ease-in",
+    "ease-out",
+    "ease-in-out",
+    "cubic-bezier"
+  ]).default("ease-in-out"),
+  iterations: int("iterations").default(1),
+  direction: mysqlEnum("direction", ["normal", "reverse", "alternate", "alternate-reverse"]).default("normal"),
+  fillMode: mysqlEnum("fillMode", ["none", "forwards", "backwards", "both"]).default("forwards"),
+  transformOrigin: varchar("transformOrigin", { length: 100 }).default("center center"),
+  keyframes: text("keyframes"), // JSON string for custom animations
+  enabled: int("enabled").default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ElementAnimation = typeof elementAnimations.$inferSelect;
+export type InsertElementAnimation = typeof elementAnimations.$inferInsert;
+
+/**
+ * Transition Effects Table
+ * Stores transition effects between elements
+ */
+export const transitionEffects = mysqlTable("transitionEffects", {
+  id: int("id").autoincrement().primaryKey(),
+  elementId: int("elementId").notNull(),
+  projectId: int("projectId").notNull(),
+  transitionType: mysqlEnum("transitionType", [
+    "fade",
+    "slide",
+    "wipe",
+    "dissolve",
+    "push",
+    "cover",
+    "uncover",
+    "reveal",
+    "blinds",
+    "checkerboard",
+    "custom"
+  ]).notNull(),
+  duration: int("duration").notNull().default(500), // milliseconds
+  delay: int("delay").default(0),
+  direction: varchar("direction", { length: 50 }).default("left"),
+  easing: varchar("easing", { length: 50 }).default("ease-in-out"),
+  enabled: int("enabled").default(1),
+  metadata: text("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TransitionEffect = typeof transitionEffects.$inferSelect;
+export type InsertTransitionEffect = typeof transitionEffects.$inferInsert;
+
+/**
+ * Animation Timeline Table
+ * Manages timing and sequencing of animations
+ */
+export const animationTimeline = mysqlTable("animationTimeline", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  elementId: int("elementId").notNull(),
+  startTime: int("startTime").notNull(), // milliseconds
+  endTime: int("endTime").notNull(),
+  animationId: int("animationId"),
+  transitionId: int("transitionId"),
+  sequenceOrder: int("sequenceOrder").notNull(),
+  triggerType: mysqlEnum("triggerType", ["auto", "click", "hover", "scroll", "custom"]).default("auto"),
+  triggerDelay: int("triggerDelay").default(0),
+  metadata: text("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AnimationTimeline = typeof animationTimeline.$inferSelect;
+export type InsertAnimationTimeline = typeof animationTimeline.$inferInsert;
+
+/**
+ * Animation Presets Table
+ * Stores pre-built animation combinations
+ */
+export const animationPresets = mysqlTable("animationPresets", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }).notNull(),
+  animations: text("animations"), // JSON array of animation configs
+  thumbnail: text("thumbnail"),
+  duration: int("duration").notNull(),
+  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).default("easy"),
+  tags: text("tags"),
+  usageCount: int("usageCount").default(0),
+  isPublic: int("isPublic").default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AnimationPreset = typeof animationPresets.$inferSelect;
+export type InsertAnimationPreset = typeof animationPresets.$inferInsert;
