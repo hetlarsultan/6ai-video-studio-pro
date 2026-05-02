@@ -105,3 +105,79 @@ export const templateAssets = mysqlTable("templateAssets", {
 
 export type TemplateAsset = typeof templateAssets.$inferSelect;
 export type InsertTemplateAsset = typeof templateAssets.$inferInsert;
+
+/**
+ * Project Elements/Layers Table
+ * Stores individual elements (text, images, shapes) in a project
+ */
+export const projectElements = mysqlTable("projectElements", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  elementType: mysqlEnum("elementType", ["text", "image", "shape", "video", "audio"]).notNull(),
+  layerIndex: int("layerIndex").notNull(),
+  x: int("x").default(0),
+  y: int("y").default(0),
+  width: int("width").default(100),
+  height: int("height").default(100),
+  rotation: int("rotation").default(0),
+  opacity: int("opacity").default(100),
+  zIndex: int("zIndex").default(0),
+  content: text("content"),
+  style: text("style"),
+  animation: text("animation"),
+  locked: int("locked").default(0),
+  visible: int("visible").default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProjectElement = typeof projectElements.$inferSelect;
+export type InsertProjectElement = typeof projectElements.$inferInsert;
+
+/**
+ * Element Customization Table
+ * Stores customization properties for elements (colors, fonts, effects)
+ */
+export const elementCustomization = mysqlTable("elementCustomization", {
+  id: int("id").autoincrement().primaryKey(),
+  elementId: int("elementId").notNull(),
+  backgroundColor: varchar("backgroundColor", { length: 20 }),
+  textColor: varchar("textColor", { length: 20 }),
+  borderColor: varchar("borderColor", { length: 20 }),
+  borderWidth: int("borderWidth"),
+  borderRadius: int("borderRadius"),
+  fontFamily: varchar("fontFamily", { length: 100 }),
+  fontSize: int("fontSize"),
+  fontWeight: varchar("fontWeight", { length: 20 }),
+  fontStyle: varchar("fontStyle", { length: 20 }),
+  textAlign: varchar("textAlign", { length: 20 }),
+  lineHeight: int("lineHeight"),
+  letterSpacing: int("letterSpacing"),
+  shadowColor: varchar("shadowColor", { length: 20 }),
+  shadowBlur: int("shadowBlur"),
+  shadowOffsetX: int("shadowOffsetX"),
+  shadowOffsetY: int("shadowOffsetY"),
+  filters: text("filters"),
+  metadata: text("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ElementCustomization = typeof elementCustomization.$inferSelect;
+export type InsertElementCustomization = typeof elementCustomization.$inferInsert;
+
+/**
+ * Project History/Undo Table
+ * Stores project state snapshots for undo/redo functionality
+ */
+export const projectHistory = mysqlTable("projectHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  action: varchar("action", { length: 100 }).notNull(),
+  previousState: text("previousState"),
+  newState: text("newState"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type ProjectHistory = typeof projectHistory.$inferSelect;
+export type InsertProjectHistory = typeof projectHistory.$inferInsert;

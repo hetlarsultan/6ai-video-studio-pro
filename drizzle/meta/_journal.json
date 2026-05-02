@@ -15,6 +15,13 @@
       "when": 1777156881080,
       "tag": "0001_dry_living_lightning",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1777157283018,
+      "tag": "0002_fair_wither",
+      "breakpoints": true
     }
   ]
 }
