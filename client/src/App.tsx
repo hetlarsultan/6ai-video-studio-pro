@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Templates from "./pages/Templates";
 import EffectEditor from "./pages/EffectEditor";
+import VideoEditor from "./pages/VideoEditor";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/templates" component={Templates} />
       <Route path="/effect-editor" component={EffectEditor} />
+      <Route path="/video-editor" component={VideoEditor} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
