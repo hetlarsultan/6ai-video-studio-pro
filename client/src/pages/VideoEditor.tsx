@@ -7,13 +7,14 @@ import { useLocation } from 'wouter';
 import AdvancedTimeline from '@/components/AdvancedTimeline';
 import VisualEffectEditor from '@/components/VisualEffectEditor';
 import AdvancedVideoPlayer from '@/components/AdvancedVideoPlayer';
+import { VideoEditorProvider, useVideoEditor } from '@/contexts/VideoEditorContext';
 import { toast } from 'sonner';
 
-export default function VideoEditor() {
+function VideoEditorContent() {
   const [, setLocation] = useLocation();
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [selectedEffects, setSelectedEffects] = useState<any[]>([]);
+  const { segments, selectedEffects, totalDuration } = useVideoEditor();
 
   const handleSaveProject = async () => {
     setIsSaving(true);
@@ -37,6 +38,13 @@ export default function VideoEditor() {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -133,16 +141,24 @@ export default function VideoEditor() {
               </Card>
               <Card className="p-4 bg-slate-700/50 border-slate-600">
                 <div className="text-sm text-slate-400">عدد المقاطع</div>
-                <div className="text-lg font-semibold text-cyan-400">0</div>
+                <div className="text-lg font-semibold text-cyan-400">{segments.length}</div>
               </Card>
               <Card className="p-4 bg-slate-700/50 border-slate-600">
                 <div className="text-sm text-slate-400">المدة الكلية</div>
-                <div className="text-lg font-semibold text-cyan-400">0:00</div>
+                <div className="text-lg font-semibold text-cyan-400">{formatTime(totalDuration)}</div>
               </Card>
             </div>
           </TabsContent>
         </Tabs>
       </div>
     </div>
+  );
+}
+
+export default function VideoEditor() {
+  return (
+    <VideoEditorProvider>
+      <VideoEditorContent />
+    </VideoEditorProvider>
   );
 }
