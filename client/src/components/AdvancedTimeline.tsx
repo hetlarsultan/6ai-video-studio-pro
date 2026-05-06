@@ -23,18 +23,19 @@ import {
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import { useVideoEditor } from '@/contexts/VideoEditorContext';
 
-interface Segment {
+interface TimelineSegment {
   id: number;
   startTime: number;
-  endTime: number;
+  endTime?: number;
   duration: number;
-  type: 'text' | 'image' | 'video' | 'audio';
-  content: string;
-  order: number;
-  visible: boolean;
-  locked: boolean;
-  effects: Array<{
+  type?: 'text' | 'image' | 'video' | 'audio';
+  content?: string;
+  order?: number;
+  visible?: boolean;
+  locked?: boolean;
+  effects?: Array<{
     effectId: number;
     startTime: number;
     duration: number;
@@ -47,12 +48,10 @@ interface AdvancedTimelineProps {
 }
 
 export default function AdvancedTimeline({ projectId }: AdvancedTimelineProps) {
-  const [segments, setSegments] = useState<Segment[]>([]);
+  const { segments, setSegments, selectedSegment, setSelectedSegment, totalDuration, setTotalDuration } = useVideoEditor();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [totalDuration, setTotalDuration] = useState(0);
   const [zoom, setZoom] = useState(1);
-  const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
 
@@ -64,10 +63,14 @@ export default function AdvancedTimeline({ projectId }: AdvancedTimelineProps) {
 
   useEffect(() => {
     if (timeline) {
-      setSegments(timeline.segments || []);
+      const mappedSegments = (timeline.segments || []).map((seg: any) => ({
+        ...seg,
+        name: seg.name || `Segment ${seg.id}`,
+      }));
+      setSegments(mappedSegments);
       setTotalDuration(timeline.totalDuration || 0);
     }
-  }, [timeline]);
+  }, [timeline, setSegments, setTotalDuration]);
 
   const handleAddSegment = async () => {
     try {

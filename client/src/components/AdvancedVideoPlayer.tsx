@@ -3,6 +3,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, Settings } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Card } from '@/components/ui/card';
+import { useVideoEditor } from '@/contexts/VideoEditorContext';
 
 interface AdvancedVideoPlayerProps {
   src?: string;
@@ -40,16 +41,18 @@ export default function AdvancedVideoPlayer({
   onEnded,
   effects = [],
 }: AdvancedVideoPlayerProps) {
+  const { selectedSegment, selectedEffects, totalDuration } = useVideoEditor();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(totalDuration || 0);
   const [volume, setVolume] = useState(muted ? 0 : 1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const animationFrameRef = useRef<number | null>(null);
+  const effectsToApply = selectedEffects.length > 0 ? selectedEffects : effects;
 
   // Initialize canvas rendering
   useEffect(() => {
@@ -67,13 +70,27 @@ export default function AdvancedVideoPlayer({
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
 
-    // Draw placeholder text
+    // Draw placeholder text with segment info
     ctx.fillStyle = '#00D9FF';
     ctx.font = 'bold 48px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('معاينة الفيديو', width / 2, height / 2);
-  }, [width, height]);
+    ctx.fillText('معاينة الفيديو', width / 2, height / 2 - 50);
+
+    // Draw segment and effects info
+    ctx.font = '24px Arial';
+    ctx.fillStyle = '#FFFFFF';
+    const segmentText = selectedSegment ? `المقطع المحدد: ${selectedSegment}` : 'لا يوجد مقطع محدد';
+    ctx.fillText(segmentText, width / 2, height / 2 + 50);
+
+    const effectsText = `التأثيرات المطبقة: ${effectsToApply.length}`;
+    ctx.fillText(effectsText, width / 2, height / 2 + 100);
+  }, [width, height, selectedSegment, effectsToApply.length]);
+
+  // Update duration when context changes
+  useEffect(() => {
+    setDuration(totalDuration || 0);
+  }, [totalDuration]);
 
   // Handle play/pause
   const handlePlayPause = () => {

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Copy, Share2, Eye, Play, Pause, Save } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import { useVideoEditor } from '@/contexts/VideoEditorContext';
 
 interface EffectAnimation {
   animationType: string;
@@ -22,6 +23,7 @@ interface EffectAnimation {
 }
 
 export default function VisualEffectEditor() {
+  const { selectedSegment, selectedEffects, setSelectedEffects } = useVideoEditor();
   const [effectName, setEffectName] = useState('');
   const [effectDescription, setEffectDescription] = useState('');
   const [category, setCategory] = useState<'entrance' | 'exit' | 'emphasis' | 'custom'>('custom');
@@ -69,6 +71,7 @@ export default function VisualEffectEditor() {
       fillMode: 'forwards',
     };
     setAnimations([...animations, newAnimation]);
+    setSelectedEffects([...selectedEffects, newAnimation]);
   };
 
   const handleUpdateAnimation = (index: number, field: string, value: any) => {
