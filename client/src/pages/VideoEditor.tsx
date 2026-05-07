@@ -9,6 +9,7 @@ import VisualEffectEditor from '@/components/VisualEffectEditor';
 import AdvancedVideoPlayer from '@/components/AdvancedVideoPlayer';
 import SharingDialog from '@/components/SharingDialog';
 import ExportModal from '@/components/ExportModal';
+import ContentGeneratorPanel from '@/components/ContentGeneratorPanel';
 import { VideoEditorProvider, useVideoEditor } from '@/contexts/VideoEditorContext';
 import { toast } from 'sonner';
 
@@ -86,10 +87,11 @@ function VideoEditorContent() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <Tabs defaultValue="preview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
             <TabsTrigger value="timeline">الجدول الزمني</TabsTrigger>
             <TabsTrigger value="effects">التأثيرات</TabsTrigger>
             <TabsTrigger value="preview">المعاينة</TabsTrigger>
+            <TabsTrigger value="generator">توليد المحتوى</TabsTrigger>
           </TabsList>
 
           {/* Timeline Tab */}
@@ -105,6 +107,14 @@ function VideoEditorContent() {
             <Card className="p-6 bg-slate-800/50 border-cyan-500/20">
               <h2 className="text-xl font-semibold mb-4">محرر التأثيرات</h2>
               <VisualEffectEditor />
+            </Card>
+          </TabsContent>
+
+          {/* Content Generator Tab */}
+          <TabsContent value="generator" className="space-y-6">
+            <Card className="p-6 bg-slate-800/50 border-cyan-500/20">
+              <h2 className="text-xl font-semibold mb-4">توليد المحتوى (فيديو/صور/صوت)</h2>
+              <ContentGeneratorPanel projectId={1} />
             </Card>
           </TabsContent>
 
