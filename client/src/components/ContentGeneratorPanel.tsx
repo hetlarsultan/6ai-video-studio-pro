@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MediaPreviewCard from '@/components/MediaPreviewCard';
+import SceneGallery from '@/components/SceneGallery';
 import {
   Select,
   SelectContent,
@@ -33,22 +34,23 @@ interface ContentGeneratorPanelProps {
   projectId: number;
 }
 
-export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPanelProps) {
-  const [activeTab, setActiveTab] = useState('video');
+export default function ContentGeneratorPanel({
+  projectId,
+}: ContentGeneratorPanelProps) {
+  const [activeTab, setActiveTab] = useState<'video' | 'image' | 'audio'>('video');
+
+  // Video states
   const [videoText, setVideoText] = useState('');
-  const [videoDuration, setVideoDuration] = useState(30);
-  const [videoQuality, setVideoQuality] = useState('medium');
-  const [videoSpeed, setVideoSpeed] = useState(1);
-  const [videoStyle, setVideoStyle] = useState('cinematic');
+  const [videoStyle, setVideoStyle] = useState<'cinematic' | 'documentary' | 'animated' | 'minimal'>('cinematic');
+  const [videoDuration, setVideoDuration] = useState(10);
 
-  const [imageText, setImageText] = useState('');
-  const [imageCount, setImageCount] = useState(1);
-  const [imageQuality, setImageQuality] = useState('high');
-  const [imageStyle, setImageStyle] = useState('realistic');
+  // Image states
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imageDuration, setImageDuration] = useState(5);
 
+  // Audio states
   const [audioText, setAudioText] = useState('');
-  const [audioVoice, setAudioVoice] = useState('neutral');
-  const [audioLanguage, setAudioLanguage] = useState('ar');
+  const [audioVoice, setAudioVoice] = useState<'female' | 'male' | 'neutral'>('female');
   const [audioSpeed, setAudioSpeed] = useState(1);
 
   const [generationId, setGenerationId] = useState<string | null>(null);
@@ -61,11 +63,10 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
     onSuccess: (data) => {
       setGenerationId(data.generationId);
       toast.success('جاري معالجة الفيديو...');
-      pollGenerationStatus(data.generationId);
     },
-    onError: (error) => {
-      toast.error('فشل في إنشاء الفيديو');
+    onError: () => {
       setGenerationStatus('error');
+      toast.error('فشل في إنشاء الفيديو');
     },
   });
 
@@ -73,11 +74,10 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
     onSuccess: (data) => {
       setGenerationId(data.generationId);
       toast.success('جاري معالجة الصور...');
-      pollGenerationStatus(data.generationId);
     },
-    onError: (error) => {
-      toast.error('فشل في إنشاء الصور');
+    onError: () => {
       setGenerationStatus('error');
+      toast.error('فشل في إنشاء الصور');
     },
   });
 
@@ -85,22 +85,62 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
     onSuccess: (data) => {
       setGenerationId(data.generationId);
       toast.success('جاري معالجة الصوت...');
-      pollGenerationStatus(data.generationId);
     },
-    onError: (error) => {
-      toast.error('فشل في إنشاء الصوت');
+    onError: () => {
       setGenerationStatus('error');
+      toast.error('فشل في إنشاء الصوت');
     },
   });
 
   const getStatusQuery = trpc.contentGeneration.getStatus.useQuery(
     { generationId: generationId || '' },
-    { enabled: !!generationId && generationStatus === 'generating', refetchInterval: 2000 }
+    {
+      enabled: !!generationId && generationStatus === 'generating',
+      refetchInterval: 1000,
+    }
   );
 
-  const pollGenerationStatus = (id: string) => {
+  const handleGenerateVideo = async () => {
+    if (!videoText.trim()) {
+      toast.error('الرجاء إدخال النص');
+      return;
+    }
     setGenerationStatus('generating');
-    // سيتم التحديث تلقائياً عبر useQuery
+    generateVideoMutation.mutate({
+      projectId,
+      text: videoText,
+      style: videoStyle,
+      duration: videoDuration,
+    });
+  };
+
+  const handleGenerateImage = async () => {
+    if (imageFiles.length === 0) {
+      toast.error('الرجاء اختيار صور');
+      return;
+    }
+    setGenerationStatus('generating');
+    generateImageMutation.mutate({
+      projectId,
+      text: 'صور متحركة',
+      count: imageFiles.length,
+      quality: 'high',
+      style: 'realistic',
+    });
+  };
+
+  const handleGenerateAudio = async () => {
+    if (!audioText.trim()) {
+      toast.error('الرجاء إدخال النص');
+      return;
+    }
+    setGenerationStatus('generating');
+    generateAudioMutation.mutate({
+      projectId,
+      text: audioText,
+      voice: audioVoice,
+      speed: audioSpeed,
+    });
   };
 
   // مراقبة تحديثات الحالة
@@ -118,71 +158,11 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
     }
   }, [getStatusQuery.data, generationStatus]);
 
-  const handleGenerateVideo = async () => {
-    if (!videoText.trim()) {
-      toast.error('الرجاء إدخال النص');
-      return;
-    }
-
-    await generateVideoMutation.mutateAsync({
-      text: videoText,
-      duration: videoDuration,
-      quality: videoQuality as 'low' | 'medium' | 'high',
-      speed: videoSpeed,
-      style: videoStyle as 'cinematic' | 'documentary' | 'animated' | 'minimal',
-      projectId,
-    });
-  };
-
-  const handleGenerateImage = async () => {
-    if (!imageText.trim()) {
-      toast.error('الرجاء إدخال النص');
-      return;
-    }
-
-    await generateImageMutation.mutateAsync({
-      text: imageText,
-      count: imageCount,
-      quality: imageQuality as 'low' | 'medium' | 'high',
-      style: imageStyle as 'realistic' | 'artistic' | 'cartoon' | 'abstract',
-      projectId,
-    });
-  };
-
-  const handleGenerateAudio = async () => {
-    if (!audioText.trim()) {
-      toast.error('الرجاء إدخال النص');
-      return;
-    }
-
-    await generateAudioMutation.mutateAsync({
-      text: audioText,
-      voice: audioVoice as 'male' | 'female' | 'neutral',
-      language: audioLanguage as 'ar' | 'en' | 'fr',
-      speed: audioSpeed,
-      projectId,
-    });
-  };
-
-  const handleDownload = () => {
-    if (previewUrl) {
-      const a = document.createElement('a');
-      a.href = previewUrl;
-      a.download = `content-${Date.now()}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast.success('تم التنزيل بنجاح');
-    }
-  };
-
   const renderPreview = () => {
-    if (!previewUrl) return null;
-
     if (activeTab === 'video') {
       return (
         <video
-          src={previewUrl}
+          src={previewUrl || ''}
           controls
           className="w-full rounded-lg bg-black"
           style={{ maxHeight: '400px' }}
@@ -191,7 +171,7 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
     } else if (activeTab === 'image') {
       return (
         <img
-          src={previewUrl}
+          src={previewUrl || ''}
           alt="Generated"
           className="w-full rounded-lg"
           style={{ maxHeight: '400px', objectFit: 'cover' }}
@@ -200,7 +180,7 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
     } else if (activeTab === 'audio') {
       return (
         <audio
-          src={previewUrl}
+          src={previewUrl || ''}
           controls
           className="w-full"
         />
@@ -209,359 +189,271 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
   };
 
   return (
-    <div className="w-full space-y-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-700">
-          <TabsTrigger value="video" className="gap-2">
-            <Film className="w-4 h-4" />
-            فيديو
-          </TabsTrigger>
-          <TabsTrigger value="image" className="gap-2">
-            <Image className="w-4 h-4" />
-            صور
-          </TabsTrigger>
-          <TabsTrigger value="audio" className="gap-2">
-            <Volume2 className="w-4 h-4" />
-            صوت
-          </TabsTrigger>
+    <div className="space-y-6">
+      {/* Main Tabs */}
+      <Tabs defaultValue="generator" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="generator">إنشاء محتوى</TabsTrigger>
+          <TabsTrigger value="gallery">معرض المشاهد</TabsTrigger>
         </TabsList>
 
-        {/* تحويل النص إلى فيديو */}
-        <TabsContent value="video" className="space-y-4">
-          <Card className="p-4 bg-slate-700/50 border-slate-600 space-y-4">
-            <div>
-              <label className="text-sm font-medium text-slate-200 block mb-2">
-                النص المراد تحويله إلى فيديو
-              </label>
-              <textarea
-                value={videoText}
-                onChange={(e) => setVideoText(e.target.value)}
-                placeholder="أدخل النص الذي تريد تحويله إلى فيديو..."
-                className="w-full h-24 p-3 bg-slate-600 border border-slate-500 rounded-lg text-slate-200 placeholder-slate-400"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-slate-200 block mb-2">
-                  المدة (ثانية)
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="1200"
-                  value={videoDuration}
-                  onChange={(e) => setVideoDuration(parseInt(e.target.value))}
-                  className="w-full"
-                />
-                <p className="text-xs text-slate-400 mt-1">{videoDuration} ثانية</p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-slate-200 block mb-2">
-                  السرعة
-                </label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.1"
-                  value={videoSpeed}
-                  onChange={(e) => setVideoSpeed(parseFloat(e.target.value))}
-                  className="w-full"
-                />
-                <p className="text-xs text-slate-400 mt-1">{videoSpeed.toFixed(1)}x</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-slate-200 block mb-2">
-                  الجودة
-                </label>
-                <Select value={videoQuality} onValueChange={setVideoQuality}>
-                  <SelectTrigger className="bg-slate-600 border-slate-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="low">منخفضة</SelectItem>
-                    <SelectItem value="medium">متوسطة</SelectItem>
-                    <SelectItem value="high">عالية</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-slate-200 block mb-2">
-                  النمط
-                </label>
-                <Select value={videoStyle} onValueChange={setVideoStyle}>
-                  <SelectTrigger className="bg-slate-600 border-slate-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="cinematic">سينمائي</SelectItem>
-                    <SelectItem value="documentary">وثائقي</SelectItem>
-                    <SelectItem value="animated">متحرك</SelectItem>
-                    <SelectItem value="minimal">بسيط</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <Button
-              onClick={handleGenerateVideo}
-              disabled={generateVideoMutation.isPending || generationStatus === 'generating'}
-              className="w-full bg-cyan-600 hover:bg-cyan-700"
-            >
-              {generateVideoMutation.isPending || generationStatus === 'generating' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  جاري المعالجة...
-                </>
-              ) : (
-                <>
-                  <Film className="w-4 h-4 mr-2" />
-                  إنشاء فيديو
-                </>
-              )}
-            </Button>
-          </Card>
+        {/* Gallery Tab */}
+        <TabsContent value="gallery" className="space-y-4">
+          <SceneGallery projectId={projectId} />
         </TabsContent>
 
-        {/* تحويل النص إلى صور */}
-        <TabsContent value="image" className="space-y-4">
-          <Card className="p-4 bg-slate-700/50 border-slate-600 space-y-4">
-            <div>
-              <label className="text-sm font-medium text-slate-200 block mb-2">
-                النص المراد تحويله إلى صور
-              </label>
-              <textarea
-                value={imageText}
-                onChange={(e) => setImageText(e.target.value)}
-                placeholder="أدخل النص الذي تريد تحويله إلى صور..."
-                className="w-full h-24 p-3 bg-slate-600 border border-slate-500 rounded-lg text-slate-200 placeholder-slate-400"
-              />
-            </div>
+        {/* Generator Tab */}
+        <TabsContent value="generator" className="space-y-6">
+          {/* Content Type Tabs */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-700">
+              <TabsTrigger value="video" className="gap-2">
+                <Film className="w-4 h-4" />
+                فيديو
+              </TabsTrigger>
+              <TabsTrigger value="image" className="gap-2">
+                <Image className="w-4 h-4" />
+                صور
+              </TabsTrigger>
+              <TabsTrigger value="audio" className="gap-2">
+                <Volume2 className="w-4 h-4" />
+                صوت
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-slate-200 block mb-2">
-                  عدد الصور
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={imageCount}
-                  onChange={(e) => setImageCount(parseInt(e.target.value))}
-                  className="w-full"
+            {/* Video Tab */}
+            <TabsContent value="video" className="space-y-4">
+              <Card className="p-6 bg-slate-800/50 border-cyan-500/20">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Film className="w-5 h-5 text-cyan-400" />
+                  فيديو متقدم من النص
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-300">النص</label>
+                    <textarea
+                      value={videoText}
+                      onChange={(e) => setVideoText(e.target.value)}
+                      placeholder="أدخل النص الذي تريد تحويله إلى فيديو..."
+                      className="w-full mt-2 p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-500 focus:border-cyan-500 outline-none"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-slate-300">النمط</label>
+                      <Select value={videoStyle} onValueChange={(v) => setVideoStyle(v as any)}>
+                        <SelectTrigger className="mt-2 bg-slate-700 border-slate-600">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                      <SelectItem value="cinematic">سينمائي</SelectItem>
+                      <SelectItem value="documentary">وثائقي</SelectItem>
+                      <SelectItem value="minimal">بسيط</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-slate-300">المدة (ثانية)</label>
+                      <Input
+                        type="number"
+                        value={videoDuration}
+                        onChange={(e) => setVideoDuration(parseInt(e.target.value))}
+                        min="5"
+                        max="1200"
+                        className="mt-2 bg-slate-700 border-slate-600"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleGenerateVideo}
+                    disabled={generationStatus === 'generating'}
+                    className="w-full bg-cyan-600 hover:bg-cyan-700 gap-2"
+                  >
+                    <Film className="w-4 h-4" />
+                    {generationStatus === 'generating' ? 'جاري الإنشاء...' : 'إنشاء فيديو'}
+                  </Button>
+                </div>
+              </Card>
+            </TabsContent>
+
+            {/* Image Tab */}
+            <TabsContent value="image" className="space-y-4">
+              <Card className="p-6 bg-slate-800/50 border-cyan-500/20">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Image className="w-5 h-5 text-cyan-400" />
+                  فيديو متقدم من الصور
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-300">اختيار الصور</label>
+                    <Input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => setImageFiles(Array.from(e.target.files || []))}
+                      className="mt-2 bg-slate-700 border-slate-600"
+                    />
+                    <p className="text-xs text-slate-400 mt-2">
+                      {imageFiles.length} صورة مختارة
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-300">المدة لكل صورة (ثانية)</label>
+                    <Input
+                      type="number"
+                      value={imageDuration}
+                      onChange={(e) => setImageDuration(parseInt(e.target.value))}
+                      min="1"
+                      max="60"
+                      className="mt-2 bg-slate-700 border-slate-600"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleGenerateImage}
+                    disabled={generationStatus === 'generating' || imageFiles.length === 0}
+                    className="w-full bg-cyan-600 hover:bg-cyan-700 gap-2"
+                  >
+                    <Image className="w-4 h-4" />
+                    {generationStatus === 'generating' ? 'جاري الإنشاء...' : 'إنشاء فيديو'}
+                  </Button>
+                </div>
+              </Card>
+            </TabsContent>
+
+            {/* Audio Tab */}
+            <TabsContent value="audio" className="space-y-4">
+              <Card className="p-6 bg-slate-800/50 border-cyan-500/20">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Volume2 className="w-5 h-5 text-cyan-400" />
+                  صوت متقدم من النص
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-300">النص</label>
+                    <textarea
+                      value={audioText}
+                      onChange={(e) => setAudioText(e.target.value)}
+                      placeholder="أدخل النص الذي تريد تحويله إلى صوت..."
+                      className="w-full mt-2 p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-500 focus:border-cyan-500 outline-none"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-slate-300">الصوت</label>
+                      <Select value={audioVoice} onValueChange={(v) => setAudioVoice(v as any)}>
+                        <SelectTrigger className="mt-2 bg-slate-700 border-slate-600">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="female">أنثى</SelectItem>
+                          <SelectItem value="male">ذكر</SelectItem>
+                          <SelectItem value="neutral">محايد</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-slate-300">السرعة</label>
+                      <Input
+                        type="number"
+                        value={audioSpeed}
+                        onChange={(e) => setAudioSpeed(parseFloat(e.target.value))}
+                        min="0.5"
+                        max="2"
+                        step="0.1"
+                        className="mt-2 bg-slate-700 border-slate-600"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleGenerateAudio}
+                    disabled={generationStatus === 'generating'}
+                    className="w-full bg-cyan-600 hover:bg-cyan-700 gap-2"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    {generationStatus === 'generating' ? 'جاري الإنشاء...' : 'إنشاء صوت'}
+                  </Button>
+                </div>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          {/* Status Section */}
+          {generationStatus === 'generating' && (
+            <Card className="p-4 bg-slate-700/50 border-cyan-500/20 space-y-3">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                <p className="text-slate-200">جاري معالجة المحتوى...</p>
+              </div>
+              <div className="w-full bg-slate-600 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-cyan-500 h-full transition-all duration-300"
+                  style={{ width: `${generationProgress}%` }}
                 />
-                <p className="text-xs text-slate-400 mt-1">{imageCount} صور</p>
+              </div>
+              <p className="text-xs text-slate-400">{generationProgress}%</p>
+            </Card>
+          )}
+
+          {generationStatus === 'completed' && previewUrl && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-green-400">
+                <CheckCircle2 className="w-5 h-5" />
+                <p className="font-medium">تم إنشاء المحتوى بنجاح!</p>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-slate-200 block mb-2">
-                  الجودة
-                </label>
-                <Select value={imageQuality} onValueChange={setImageQuality}>
-                  <SelectTrigger className="bg-slate-600 border-slate-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="low">منخفضة</SelectItem>
-                    <SelectItem value="medium">متوسطة</SelectItem>
-                    <SelectItem value="high">عالية</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-slate-200 block mb-2">
-                النمط
-              </label>
-              <Select value={imageStyle} onValueChange={setImageStyle}>
-                <SelectTrigger className="bg-slate-600 border-slate-500">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600">
-                  <SelectItem value="realistic">واقعي</SelectItem>
-                  <SelectItem value="artistic">فني</SelectItem>
-                  <SelectItem value="cartoon">رسوم متحركة</SelectItem>
-                  <SelectItem value="abstract">تجريدي</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              onClick={handleGenerateImage}
-              disabled={generateImageMutation.isPending || generationStatus === 'generating'}
-              className="w-full bg-cyan-600 hover:bg-cyan-700"
-            >
-              {generateImageMutation.isPending || generationStatus === 'generating' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  جاري المعالجة...
-                </>
-              ) : (
-                <>
-                  <Image className="w-4 h-4 mr-2" />
-                  إنشاء صور
-                </>
-              )}
-            </Button>
-          </Card>
-        </TabsContent>
-
-        {/* تحويل النص إلى صوت */}
-        <TabsContent value="audio" className="space-y-4">
-          <Card className="p-4 bg-slate-700/50 border-slate-600 space-y-4">
-            <div>
-              <label className="text-sm font-medium text-slate-200 block mb-2">
-                النص المراد تحويله إلى صوت
-              </label>
-              <textarea
-                value={audioText}
-                onChange={(e) => setAudioText(e.target.value)}
-                placeholder="أدخل النص الذي تريد تحويله إلى صوت..."
-                className="w-full h-24 p-3 bg-slate-600 border border-slate-500 rounded-lg text-slate-200 placeholder-slate-400"
+              <MediaPreviewCard
+                type={activeTab as 'video' | 'image' | 'audio'}
+                url={previewUrl}
+                title={`${activeTab === 'video' ? 'فيديو' : activeTab === 'image' ? 'صورة' : 'صوت'} - ${new Date().toLocaleString('ar-SA')}`}
+                size={1024000}
+                duration={activeTab === 'video' ? videoDuration : activeTab === 'audio' ? Math.floor(audioText.length / 10) : undefined}
+                format={activeTab === 'video' ? 'mp4' : activeTab === 'image' ? 'jpg' : 'mp3'}
               />
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-slate-200 block mb-2">
-                  الصوت
-                </label>
-                <Select value={audioVoice} onValueChange={setAudioVoice}>
-                  <SelectTrigger className="bg-slate-600 border-slate-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="male">ذكر</SelectItem>
-                    <SelectItem value="female">أنثى</SelectItem>
-                    <SelectItem value="neutral">محايد</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-slate-200 block mb-2">
-                  اللغة
-                </label>
-                <Select value={audioLanguage} onValueChange={setAudioLanguage}>
-                  <SelectTrigger className="bg-slate-600 border-slate-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="ar">العربية</SelectItem>
-                    <SelectItem value="en">الإنجليزية</SelectItem>
-                    <SelectItem value="fr">الفرنسية</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-slate-200 block mb-2">
-                السرعة
-              </label>
-              <input
-                type="range"
-                min="0.5"
-                max="2"
-                step="0.1"
-                value={audioSpeed}
-                onChange={(e) => setAudioSpeed(parseFloat(e.target.value))}
+              <Button
+                onClick={() => {
+                  setGenerationStatus('idle');
+                  setPreviewUrl(null);
+                  setGenerationId(null);
+                }}
+                variant="outline"
                 className="w-full"
-              />
-              <p className="text-xs text-slate-400 mt-1">{audioSpeed.toFixed(1)}x</p>
+              >
+                إنشاء محتوى جديد
+              </Button>
             </div>
+          )}
 
-            <Button
-              onClick={handleGenerateAudio}
-              disabled={generateAudioMutation.isPending || generationStatus === 'generating'}
-              className="w-full bg-cyan-600 hover:bg-cyan-700"
-            >
-              {generateAudioMutation.isPending || generationStatus === 'generating' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  جاري المعالجة...
-                </>
-              ) : (
-                <>
-                  <Volume2 className="w-4 h-4 mr-2" />
-                  إنشاء صوت
-                </>
-              )}
-            </Button>
-          </Card>
+          {generationStatus === 'error' && (
+            <Card className="p-4 bg-red-900/20 border-red-700 space-y-3">
+              <div className="flex items-center gap-2 text-red-400">
+                <AlertCircle className="w-5 h-5" />
+                <p className="font-medium">حدث خطأ في المعالجة</p>
+              </div>
+              <Button
+                onClick={() => setGenerationStatus('idle')}
+                variant="outline"
+                className="w-full"
+              >
+                محاولة مرة أخرى
+              </Button>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
-
-      {/* المعاينة والتنزيل */}
-      {generationStatus === 'generating' && (
-        <Card className="p-4 bg-slate-700/50 border-slate-600 space-y-3">
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-            <p className="text-slate-200">جاري معالجة المحتوى...</p>
-          </div>
-          <div className="w-full bg-slate-600 rounded-full h-2 overflow-hidden">
-            <div
-              className="bg-cyan-500 h-full transition-all duration-300"
-              style={{ width: `${generationProgress}%` }}
-            />
-          </div>
-          <p className="text-xs text-slate-400">{generationProgress}%</p>
-        </Card>
-      )}
-
-      {generationStatus === 'completed' && previewUrl && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-green-400">
-            <CheckCircle2 className="w-5 h-5" />
-            <p className="font-medium">تم إنشاء المحتوى بنجاح!</p>
-          </div>
-
-          <MediaPreviewCard
-            type={activeTab as 'video' | 'image' | 'audio'}
-            url={previewUrl}
-            title={`${activeTab === 'video' ? 'فيديو' : activeTab === 'image' ? 'صورة' : 'صوت'} - ${new Date().toLocaleString('ar-SA')}`}
-            size={1024000}
-            duration={activeTab === 'video' ? videoDuration : activeTab === 'audio' ? Math.floor(audioText.length / 10) : undefined}
-            format={activeTab === 'video' ? 'mp4' : activeTab === 'image' ? 'jpg' : 'mp3'}
-          />
-
-          <Button
-            onClick={() => {
-              setGenerationStatus('idle');
-              setPreviewUrl(null);
-              setGenerationId(null);
-            }}
-            variant="outline"
-            className="w-full"
-          >
-            إنشاء محتوى جديد
-          </Button>
-        </div>
-      )}
-
-      {generationStatus === 'error' && (
-        <Card className="p-4 bg-red-900/20 border-red-700 space-y-3">
-          <div className="flex items-center gap-2 text-red-400">
-            <AlertCircle className="w-5 h-5" />
-            <p className="font-medium">حدث خطأ في المعالجة</p>
-          </div>
-          <Button
-            onClick={() => setGenerationStatus('idle')}
-            variant="outline"
-            className="w-full"
-          >
-            محاولة مرة أخرى
-          </Button>
-        </Card>
-      )}
     </div>
   );
 }
