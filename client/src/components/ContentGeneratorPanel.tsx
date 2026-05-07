@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import MediaPreviewCard from '@/components/MediaPreviewCard';
 import {
   Select,
   SelectContent,
@@ -53,6 +54,7 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
   const [generationId, setGenerationId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
+  const [generationProgress, setGenerationProgress] = useState(0);
 
   // tRPC mutations
   const generateVideoMutation = trpc.contentGeneration.generateVideo.useMutation({
@@ -102,16 +104,19 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
   };
 
   // مراقبة تحديثات الحالة
-  if (getStatusQuery.data && generationStatus === 'generating') {
-    if (getStatusQuery.data.status === 'completed') {
-      setGenerationStatus('completed');
-      setPreviewUrl(getStatusQuery.data.result?.url || null);
-      toast.success('تم إنشاء المحتوى بنجاح! ✅');
-    } else if (getStatusQuery.data.status === 'failed') {
-      setGenerationStatus('error');
-      toast.error(getStatusQuery.data.error || 'فشل في المعالجة');
+  useEffect(() => {
+    if (getStatusQuery.data && generationStatus === 'generating') {
+      setGenerationProgress(getStatusQuery.data.progress || 0);
+      if (getStatusQuery.data.status === 'completed') {
+        setGenerationStatus('completed');
+        setPreviewUrl(getStatusQuery.data.result?.url || null);
+        toast.success('تم إنشاء المحتوى بنجاح! ✅');
+      } else if (getStatusQuery.data.status === 'failed') {
+        setGenerationStatus('error');
+        toast.error(getStatusQuery.data.error || 'فشل في المعالجة');
+      }
     }
-  }
+  }, [getStatusQuery.data, generationStatus]);
 
   const handleGenerateVideo = async () => {
     if (!videoText.trim()) {
@@ -505,46 +510,41 @@ export default function ContentGeneratorPanel({ projectId }: ContentGeneratorPan
           <div className="w-full bg-slate-600 rounded-full h-2 overflow-hidden">
             <div
               className="bg-cyan-500 h-full transition-all duration-300"
-              style={{ width: `${getStatusQuery.data?.progress || 0}%` }}
+              style={{ width: `${generationProgress}%` }}
             />
           </div>
-          <p className="text-xs text-slate-400">{getStatusQuery.data?.progress || 0}%</p>
+          <p className="text-xs text-slate-400">{generationProgress}%</p>
         </Card>
       )}
 
       {generationStatus === 'completed' && previewUrl && (
-        <Card className="p-4 bg-slate-700/50 border-slate-600 space-y-4">
+        <div className="space-y-4">
           <div className="flex items-center gap-2 text-green-400">
             <CheckCircle2 className="w-5 h-5" />
             <p className="font-medium">تم إنشاء المحتوى بنجاح!</p>
           </div>
 
-          <div className="space-y-3">
-            <p className="text-sm text-slate-300">المعاينة:</p>
-            {renderPreview()}
-          </div>
+          <MediaPreviewCard
+            type={activeTab as 'video' | 'image' | 'audio'}
+            url={previewUrl}
+            title={`${activeTab === 'video' ? 'فيديو' : activeTab === 'image' ? 'صورة' : 'صوت'} - ${new Date().toLocaleString('ar-SA')}`}
+            size={1024000}
+            duration={activeTab === 'video' ? videoDuration : activeTab === 'audio' ? Math.floor(audioText.length / 10) : undefined}
+            format={activeTab === 'video' ? 'mp4' : activeTab === 'image' ? 'jpg' : 'mp3'}
+          />
 
-          <div className="flex gap-2">
-            <Button
-              onClick={handleDownload}
-              className="flex-1 bg-cyan-600 hover:bg-cyan-700 gap-2"
-            >
-              <Download className="w-4 h-4" />
-              تنزيل
-            </Button>
-            <Button
-              onClick={() => {
-                setGenerationStatus('idle');
-                setPreviewUrl(null);
-                setGenerationId(null);
-              }}
-              variant="outline"
-              className="flex-1"
-            >
-              إنشاء جديد
-            </Button>
-          </div>
-        </Card>
+          <Button
+            onClick={() => {
+              setGenerationStatus('idle');
+              setPreviewUrl(null);
+              setGenerationId(null);
+            }}
+            variant="outline"
+            className="w-full"
+          >
+            إنشاء محتوى جديد
+          </Button>
+        </div>
       )}
 
       {generationStatus === 'error' && (
