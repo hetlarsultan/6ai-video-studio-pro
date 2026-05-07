@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MediaPreviewCard from '@/components/MediaPreviewCard';
 import SceneGallery from '@/components/SceneGallery';
+import AdvancedPreviewDownload from '@/components/AdvancedPreviewDownload';
 import {
   Select,
   SelectContent,
@@ -414,7 +415,7 @@ export default function ContentGeneratorPanel({
                 <p className="font-medium">تم إنشاء المحتوى بنجاح!</p>
               </div>
 
-              <MediaPreviewCard
+              <AdvancedPreviewDownload
                 type={activeTab as 'video' | 'image' | 'audio'}
                 url={previewUrl}
                 title={`${activeTab === 'video' ? 'فيديو' : activeTab === 'image' ? 'صورة' : 'صوت'} - ${new Date().toLocaleString('ar-SA')}`}
