@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, Download, Share2, ArrowLeft } from 'lucide-react';
+import { Save, ArrowLeft } from 'lucide-react';
 import { useLocation } from 'wouter';
 import AdvancedTimeline from '@/components/AdvancedTimeline';
 import VisualEffectEditor from '@/components/VisualEffectEditor';
 import AdvancedVideoPlayer from '@/components/AdvancedVideoPlayer';
+import SharingDialog from '@/components/SharingDialog';
+import ExportModal from '@/components/ExportModal';
 import { VideoEditorProvider, useVideoEditor } from '@/contexts/VideoEditorContext';
 import { toast } from 'sonner';
 
 function VideoEditorContent() {
   const [, setLocation] = useLocation();
   const [isSaving, setIsSaving] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const { segments, selectedEffects, totalDuration } = useVideoEditor();
 
   const handleSaveProject = async () => {
@@ -28,16 +29,11 @@ function VideoEditorContent() {
     }
   };
 
-  const handleExportVideo = async () => {
-    setIsExporting(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      toast.success('تم تصدير الفيديو بنجاح ✅');
-    } catch (error) {
-      toast.error('فشل تصدير الفيديو');
-    } finally {
-      setIsExporting(false);
-    }
+  const handleExportVideo = async (options: any) => {
+    return {
+      url: URL.createObjectURL(new Blob(['video data'], { type: 'video/mp4' })),
+      size: 1024 * 1024 * 50,
+    };
   };
 
   const formatTime = (ms: number) => {
@@ -74,19 +70,15 @@ function VideoEditorContent() {
               <Save className="w-4 h-4" />
               {isSaving ? 'جاري الحفظ...' : 'حفظ'}
             </Button>
-            <Button
-              onClick={handleExportVideo}
-              disabled={isExporting}
-              variant="outline"
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              {isExporting ? 'جاري التصدير...' : 'تصدير'}
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Share2 className="w-4 h-4" />
-              مشاركة
-            </Button>
+            <ExportModal
+              projectId={1}
+              projectName="مشروع الفيديو"
+              totalDuration={totalDuration}
+            />
+            <SharingDialog
+              projectId={1}
+              projectName="مشروع الفيديو"
+            />
           </div>
         </div>
       </div>
