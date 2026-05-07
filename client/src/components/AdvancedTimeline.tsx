@@ -24,6 +24,7 @@ import {
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { useVideoEditor } from '@/contexts/VideoEditorContext';
+import { LoadingState, ErrorState, NoSegmentsPlaceholder } from '@/components/StateHandlers';
 
 interface TimelineSegment {
   id: number;
@@ -52,14 +53,21 @@ export default function AdvancedTimeline({ projectId }: AdvancedTimelineProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [error, setError] = useState<string | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
 
-  const { data: timeline } = trpc.videoTimeline.get.useQuery({ projectId });
+  const { data: timeline, isLoading, error: queryError } = trpc.videoTimeline.get.useQuery({ projectId });
   const addSegmentMutation = trpc.videoTimeline.addSegment.useMutation();
   const removeSegmentMutation = trpc.videoTimeline.removeSegment.useMutation();
   const updateSegmentMutation = trpc.videoTimeline.updateSegment.useMutation();
   const reorderMutation = trpc.videoTimeline.reorderSegments.useMutation();
+
+  useEffect(() => {
+    if (queryError) {
+      setError(queryError instanceof Error ? queryError.message : 'حدث خطأ في تحميل الجدول الزمني');
+    }
+  }, [queryError]);
 
   useEffect(() => {
     if (timeline) {
@@ -69,6 +77,7 @@ export default function AdvancedTimeline({ projectId }: AdvancedTimelineProps) {
       }));
       setSegments(mappedSegments);
       setTotalDuration(timeline.totalDuration || 0);
+      setError(null);
     }
   }, [timeline, setSegments, setTotalDuration]);
 
@@ -158,6 +167,27 @@ export default function AdvancedTimeline({ projectId }: AdvancedTimelineProps) {
   };
 
   const pixelsPerSecond = 50 * zoom;
+
+  if (isLoading) {
+    return <LoadingState message="جاري تحميل الجدول الزمني..." />;
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        error={error}
+        title="خطأ في تحميل الجدول الزمني"
+        onRetry={() => {
+          setError(null);
+          window.location.reload();
+        }}
+      />
+    );
+  }
+
+  if (!segments || segments.length === 0) {
+    return <NoSegmentsPlaceholder />;
+  }
 
   return (
     <div className="w-full space-y-4">
