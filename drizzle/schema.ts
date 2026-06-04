@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { mysqlTable, mysqlEnum, int, varchar, text, timestamp, decimal, bigint } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -304,3 +304,71 @@ export const animationPresets = mysqlTable("animationPresets", {
 
 export type AnimationPreset = typeof animationPresets.$inferSelect;
 export type InsertAnimationPreset = typeof animationPresets.$inferInsert;
+
+/**
+ * Generated Media Files Table
+ * Stores all generated videos, images, and audio files
+ */
+export const generatedMediaFiles = mysqlTable("generatedMediaFiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  projectId: int("projectId"),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  type: mysqlEnum("type", ["video", "image", "audio"]).notNull(),
+  format: varchar("format", { length: 50 }).notNull(),
+  url: text("url").notNull(),
+  s3Key: varchar("s3Key", { length: 500 }),
+  size: int("size").notNull(),
+  duration: int("duration"),
+  thumbnail: text("thumbnail"),
+  width: int("width"),
+  height: int("height"),
+  bitrate: varchar("bitrate", { length: 50 }),
+  quality: mysqlEnum("quality", ["low", "medium", "high"]).default("high"),
+  style: varchar("style", { length: 100 }),
+  voice: varchar("voice", { length: 50 }),
+  speed: decimal("speed", { precision: 3, scale: 2 }),
+  isPublic: int("isPublic").default(0),
+  isStarred: int("isStarred").default(0),
+  downloadCount: int("downloadCount").default(0),
+  shareCount: int("shareCount").default(0),
+  tags: text("tags"),
+  metadata: text("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+});
+
+export type GeneratedMediaFile = typeof generatedMediaFiles.$inferSelect;
+export type InsertGeneratedMediaFile = typeof generatedMediaFiles.$inferInsert;
+
+/**
+ * Media File Tags Table
+ * For organizing and searching generated files
+ */
+export const mediaFileTags = mysqlTable("mediaFileTags", {
+  id: int("id").autoincrement().primaryKey(),
+  mediaFileId: int("mediaFileId").notNull().references(() => generatedMediaFiles.id, { onDelete: "cascade" }),
+  tag: varchar("tag", { length: 100 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MediaFileTag = typeof mediaFileTags.$inferSelect;
+export type InsertMediaFileTag = typeof mediaFileTags.$inferInsert;
+
+/**
+ * Media File Downloads Table
+ * Track download history
+ */
+export const mediaFileDownloads = mysqlTable("mediaFileDownloads", {
+  id: int("id").autoincrement().primaryKey(),
+  mediaFileId: int("mediaFileId").notNull().references(() => generatedMediaFiles.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  downloadedAt: timestamp("downloadedAt").defaultNow().notNull(),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: text("userAgent"),
+});
+
+export type MediaFileDownload = typeof mediaFileDownloads.$inferSelect;
+export type InsertMediaFileDownload = typeof mediaFileDownloads.$inferInsert;
