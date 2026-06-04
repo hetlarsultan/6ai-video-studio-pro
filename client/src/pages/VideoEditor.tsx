@@ -10,6 +10,7 @@ import AdvancedVideoPlayer from '@/components/AdvancedVideoPlayer';
 import SharingDialog from '@/components/SharingDialog';
 import ExportModal from '@/components/ExportModal';
 import ContentGeneratorPanel from '@/components/ContentGeneratorPanel';
+import IntegratedMediaStudio from '@/components/IntegratedMediaStudio';
 import { VideoEditorProvider, useVideoEditor } from '@/contexts/VideoEditorContext';
 import { toast } from 'sonner';
 
