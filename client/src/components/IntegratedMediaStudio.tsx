@@ -150,8 +150,6 @@ export default function IntegratedMediaStudio({
           description: activeTab === 'video' ? videoText : activeTab === 'audio' ? audioText : 'صور متحركة',
           duration: config.duration,
           videoUrl: resultUrl,
-          thumbnail: resultUrl,
-          thumbnail: resultUrl,
           createdAt: new Date(),
           
           
