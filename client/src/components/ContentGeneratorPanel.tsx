@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,142 +28,118 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
+import type { Scene } from '@/types/media';
 
 interface ContentGeneratorPanelProps {
   projectId: number;
 }
 
-interface Scene {
-  id: string;
-  title: string;
-  description: string;
-  duration: number;
-  videoUrl: string;
-  thumbnailUrl: string;
-  createdAt: Date;
-  updatedAt: Date;
-  status: 'saved' | 'processing' | 'failed';
-}
-
 export default function ContentGeneratorPanel({
   projectId,
 }: ContentGeneratorPanelProps) {
+  // State Management
   const [activeTab, setActiveTab] = useState<'video' | 'image' | 'audio'>('video');
+  const [showSceneGallery, setShowSceneGallery] = useState(true);
 
-  // Video states
+  // Video State
   const [videoText, setVideoText] = useState('');
-  const [videoStyle, setVideoStyle] = useState<'cinematic' | 'documentary' | 'animated' | 'minimal'>('cinematic');
   const [videoDuration, setVideoDuration] = useState(10);
+  const [videoQuality, setVideoQuality] = useState<'low' | 'medium' | 'high'>('high');
 
-  // Image states
+  // Image State
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imageDuration, setImageDuration] = useState(5);
+  const [imageDuration, setImageDuration] = useState(3);
+  const [imageQuality, setImageQuality] = useState<'low' | 'medium' | 'high'>('high');
 
-  // Audio states
+  // Audio State
   const [audioText, setAudioText] = useState('');
   const [audioVoice, setAudioVoice] = useState<'female' | 'male' | 'neutral'>('female');
   const [audioSpeed, setAudioSpeed] = useState(1);
 
-  // Generation states
-  const [generationId, setGenerationId] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [generationStatus, setGenerationStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
-  const [generationProgress, setGenerationProgress] = useState(0);
-
-  // Scene gallery states
+  // Scene Gallery State
   const [createdScenes, setCreatedScenes] = useState<Scene[]>([]);
-  const [totalDuration, setTotalDuration] = useState(0);
   const [sceneCount, setSceneCount] = useState(0);
-  const [showSceneGallery, setShowSceneGallery] = useState(false);
+  const [totalDuration, setTotalDuration] = useState(0);
 
-  // tRPC mutations
+  // Generation State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
+  // tRPC Mutations
   const generateVideoMutation = trpc.contentGeneration.generateVideo.useMutation({
     onSuccess: (data) => {
-      setGenerationId(data.generationId);
-      setGenerationStatus('generating');
-      toast.success('جاري معالجة الفيديو...');
+      const newScene: Scene = {
+        id: data.generationId || `scene-${Date.now()}`,
+        title: `🎬 فيديو - ${new Date().toLocaleString('ar-SA')}`,
+        description: videoText,
+        duration: videoDuration,
+        videoUrl: data.result?.url || '',
+        thumbnail: data.result?.url || '',
+        createdAt: new Date(),
+      };
+
+      setCreatedScenes((prev) => [...prev, newScene]);
+      setSceneCount((prev) => prev + 1);
+      setTotalDuration((prev) => prev + videoDuration);
+      setIsGenerating(false);
+      toast.success(`✅ تم إنشاء الفيديو بنجاح! (${videoDuration}ث)`);
     },
-    onError: () => {
-      setGenerationStatus('error');
-      toast.error('فشل في إنشاء الفيديو');
+    onError: (error) => {
+      setGenerationError(error.message || 'فشل في إنشاء الفيديو');
+      setIsGenerating(false);
+      toast.error('❌ فشل في إنشاء الفيديو');
     },
   });
 
   const generateImageMutation = trpc.contentGeneration.generateImage.useMutation({
     onSuccess: (data) => {
-      setGenerationId(data.generationId);
-      setGenerationStatus('generating');
-      toast.success('جاري معالجة الصور...');
+      const newScene: Scene = {
+        id: data.generationId || `scene-${Date.now()}`,
+        title: `🖼️ صور - ${new Date().toLocaleString('ar-SA')}`,
+        description: `${imageFiles.length} صورة متحركة`,
+        duration: imageDuration * imageFiles.length,
+        videoUrl: data.result?.url || '',
+        thumbnail: data.result?.url || '',
+        createdAt: new Date(),
+      };
+
+      setCreatedScenes((prev) => [...prev, newScene]);
+      setSceneCount((prev) => prev + 1);
+      setTotalDuration((prev) => prev + imageDuration * imageFiles.length);
+      setIsGenerating(false);
+      toast.success(`✅ تم إنشاء الصور بنجاح! (${imageFiles.length} صورة)`);
     },
-    onError: () => {
-      setGenerationStatus('error');
-      toast.error('فشل في إنشاء الصور');
+    onError: (error) => {
+      setGenerationError(error.message || 'فشل في إنشاء الصور');
+      setIsGenerating(false);
+      toast.error('❌ فشل في إنشاء الصور');
     },
   });
 
   const generateAudioMutation = trpc.contentGeneration.generateAudio.useMutation({
     onSuccess: (data) => {
-      setGenerationId(data.generationId);
-      setGenerationStatus('generating');
-      toast.success('جاري معالجة الصوت...');
+      const newScene: Scene = {
+        id: data.generationId || `scene-${Date.now()}`,
+        title: `🔊 صوت - ${new Date().toLocaleString('ar-SA')}`,
+        description: audioText,
+        duration: 30, // Default audio duration
+        videoUrl: data.result?.url || '',
+        thumbnail: data.result?.url || '',
+        createdAt: new Date(),
+      };
+
+      setCreatedScenes((prev) => [...prev, newScene]);
+      setSceneCount((prev) => prev + 1);
+      setTotalDuration((prev) => prev + 30);
+      setIsGenerating(false);
+      toast.success(`✅ تم إنشاء الصوت بنجاح!`);
     },
-    onError: () => {
-      setGenerationStatus('error');
-      toast.error('فشل في إنشاء الصوت');
+    onError: (error) => {
+      setGenerationError(error.message || 'فشل في إنشاء الصوت');
+      setIsGenerating(false);
+      toast.error('❌ فشل في إنشاء الصوت');
     },
   });
-
-  // Get generation status
-  const getStatusQuery = trpc.contentGeneration.getStatus.useQuery(
-    { generationId: generationId || '' },
-    {
-      enabled: !!generationId && generationStatus === 'generating',
-      refetchInterval: 1000,
-    }
-  );
-
-  // Monitor generation completion
-  useEffect(() => {
-    if (getStatusQuery.data && generationStatus === 'generating') {
-      setGenerationProgress(getStatusQuery.data.progress || 0);
-
-      if (getStatusQuery.data.status === 'completed') {
-        const resultUrl = getStatusQuery.data.result?.url || '';
-        setPreviewUrl(resultUrl);
-        setGenerationStatus('completed');
-
-        // Create new scene
-        const newScene: Scene = {
-          id: generationId || `scene-${Date.now()}`,
-          title: `${activeTab === 'video' ? 'فيديو' : activeTab === 'image' ? 'صورة' : 'صوت'} - ${new Date().toLocaleString('ar-SA')}`,
-          description: activeTab === 'video' ? videoText : activeTab === 'audio' ? audioText : 'صور متحركة',
-          duration: activeTab === 'video' ? videoDuration : activeTab === 'audio' ? Math.floor(audioText.length / 10) : imageDuration,
-          videoUrl: resultUrl,
-          thumbnailUrl: resultUrl,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          status: 'saved',
-        };
-
-        // Add scene to gallery
-        setCreatedScenes((prev) => [...prev, newScene]);
-        const newCount = sceneCount + 1;
-        const newDuration = totalDuration + newScene.duration;
-        setSceneCount(newCount);
-        setTotalDuration(newDuration);
-        setShowSceneGallery(true);
-
-        // Show success toast with scene info
-        toast.success(
-          `✅ تم إنشاء ${newCount} مشهد بنجاح!\nالمدة الكلية: ${newDuration} ثانية`
-        );
-        toast.info('🎬 جاري عرض المشاهد في المعاينة...');
-      } else if (getStatusQuery.data.status === 'failed') {
-        setGenerationStatus('error');
-        toast.error(getStatusQuery.data.error || 'فشل في المعالجة');
-      }
-    }
-  }, [getStatusQuery.data, generationStatus]);
 
   // Handle video generation
   const handleGenerateVideo = () => {
@@ -171,9 +147,10 @@ export default function ContentGeneratorPanel({
       toast.error('يرجى إدخال نص الفيديو');
       return;
     }
+    setIsGenerating(true);
+    setGenerationError(null);
     generateVideoMutation.mutate({
       text: videoText,
-      style: videoStyle,
       duration: videoDuration,
       projectId,
     });
@@ -185,9 +162,12 @@ export default function ContentGeneratorPanel({
       toast.error('يرجى اختيار صور');
       return;
     }
+    setIsGenerating(true);
+    setGenerationError(null);
     generateImageMutation.mutate({
-      files: imageFiles,
-      duration: imageDuration,
+      text: 'صور متحركة',
+      count: imageFiles.length,
+      quality: imageQuality,
       projectId,
     });
   };
@@ -198,6 +178,8 @@ export default function ContentGeneratorPanel({
       toast.error('يرجى إدخال نص الصوت');
       return;
     }
+    setIsGenerating(true);
+    setGenerationError(null);
     generateAudioMutation.mutate({
       text: audioText,
       voice: audioVoice,
@@ -257,37 +239,26 @@ export default function ContentGeneratorPanel({
         </TabsList>
 
         {/* Video Tab */}
-        <TabsContent value="video" className="space-y-4">
-          <Card className="p-4 bg-slate-800/50 border-cyan-500/20">
+        <TabsContent value="video" className="space-y-4 mt-4">
+          <Card className="p-6 bg-slate-800/50 border-slate-700">
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-slate-300">نص الفيديو</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  نص الفيديو
+                </label>
                 <textarea
                   value={videoText}
                   onChange={(e) => setVideoText(e.target.value)}
                   placeholder="أدخل النص الذي تريد تحويله إلى فيديو..."
-                  className="w-full h-24 p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                  className="w-full h-20 p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-slate-300">النمط</label>
-                  <Select value={videoStyle} onValueChange={(value) => setVideoStyle(value as any)}>
-                    <SelectTrigger className="bg-slate-700 border-slate-600">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cinematic">سينمائي</SelectItem>
-                      <SelectItem value="documentary">وثائقي</SelectItem>
-                      <SelectItem value="animated">متحرك</SelectItem>
-                      <SelectItem value="minimal">بسيط</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-slate-300">المدة (ثانية)</label>
+                  <label className="text-sm font-medium text-slate-300 block mb-2">
+                    المدة (ثانية)
+                  </label>
                   <Input
                     type="number"
                     value={videoDuration}
@@ -297,23 +268,35 @@ export default function ContentGeneratorPanel({
                     className="bg-slate-700 border-slate-600"
                   />
                 </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-300 block mb-2">
+                    الجودة
+                  </label>
+                  <Select value={videoQuality} onValueChange={(value) => setVideoQuality(value as any)}>
+                    <SelectTrigger className="bg-slate-700 border-slate-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">منخفضة</SelectItem>
+                      <SelectItem value="medium">متوسطة</SelectItem>
+                      <SelectItem value="high">عالية</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <Button
                 onClick={handleGenerateVideo}
-                disabled={generationStatus === 'generating'}
-                className="w-full bg-cyan-600 hover:bg-cyan-700 gap-2"
+                disabled={isGenerating}
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
               >
-                {generationStatus === 'generating' ? (
+                {isGenerating ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     جاري الإنشاء...
                   </>
                 ) : (
-                  <>
-                    <Film className="w-4 h-4" />
-                    إنشاء فيديو
-                  </>
+                  'إنشاء فيديو'
                 )}
               </Button>
             </div>
@@ -321,11 +304,13 @@ export default function ContentGeneratorPanel({
         </TabsContent>
 
         {/* Image Tab */}
-        <TabsContent value="image" className="space-y-4">
-          <Card className="p-4 bg-slate-800/50 border-cyan-500/20">
+        <TabsContent value="image" className="space-y-4 mt-4">
+          <Card className="p-6 bg-slate-800/50 border-slate-700">
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-slate-300">الصور</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  اختر الصور
+                </label>
                 <Input
                   type="file"
                   multiple
@@ -333,35 +318,54 @@ export default function ContentGeneratorPanel({
                   onChange={(e) => setImageFiles(Array.from(e.target.files || []))}
                   className="bg-slate-700 border-slate-600"
                 />
+                {imageFiles.length > 0 && (
+                  <p className="text-xs text-cyan-400 mt-2">✓ تم اختيار {imageFiles.length} صورة</p>
+                )}
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-slate-300">مدة كل صورة (ثانية)</label>
-                <Input
-                  type="number"
-                  value={imageDuration}
-                  onChange={(e) => setImageDuration(parseInt(e.target.value))}
-                  min={1}
-                  max={60}
-                  className="bg-slate-700 border-slate-600"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-300 block mb-2">
+                    مدة الصورة (ثانية)
+                  </label>
+                  <Input
+                    type="number"
+                    value={imageDuration}
+                    onChange={(e) => setImageDuration(parseInt(e.target.value))}
+                    min={1}
+                    max={60}
+                    className="bg-slate-700 border-slate-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-300 block mb-2">
+                    الجودة
+                  </label>
+                  <Select value={imageQuality} onValueChange={(value) => setImageQuality(value as any)}>
+                    <SelectTrigger className="bg-slate-700 border-slate-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">منخفضة</SelectItem>
+                      <SelectItem value="medium">متوسطة</SelectItem>
+                      <SelectItem value="high">عالية</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <Button
                 onClick={handleGenerateImage}
-                disabled={generationStatus === 'generating'}
-                className="w-full bg-cyan-600 hover:bg-cyan-700 gap-2"
+                disabled={isGenerating}
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
               >
-                {generationStatus === 'generating' ? (
+                {isGenerating ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     جاري الإنشاء...
                   </>
                 ) : (
-                  <>
-                    <Image className="w-4 h-4" />
-                    إنشاء فيديو من الصور
-                  </>
+                  'إنشاء فيديو من الصور'
                 )}
               </Button>
             </div>
@@ -369,22 +373,26 @@ export default function ContentGeneratorPanel({
         </TabsContent>
 
         {/* Audio Tab */}
-        <TabsContent value="audio" className="space-y-4">
-          <Card className="p-4 bg-slate-800/50 border-cyan-500/20">
+        <TabsContent value="audio" className="space-y-4 mt-4">
+          <Card className="p-6 bg-slate-800/50 border-slate-700">
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-slate-300">نص الصوت</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  نص الصوت
+                </label>
                 <textarea
                   value={audioText}
                   onChange={(e) => setAudioText(e.target.value)}
                   placeholder="أدخل النص الذي تريد تحويله إلى صوت..."
-                  className="w-full h-24 p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                  className="w-full h-20 p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-slate-300">الصوت</label>
+                  <label className="text-sm font-medium text-slate-300 block mb-2">
+                    الصوت
+                  </label>
                   <Select value={audioVoice} onValueChange={(value) => setAudioVoice(value as any)}>
                     <SelectTrigger className="bg-slate-700 border-slate-600">
                       <SelectValue />
@@ -396,9 +404,10 @@ export default function ContentGeneratorPanel({
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium text-slate-300">السرعة</label>
+                  <label className="text-sm font-medium text-slate-300 block mb-2">
+                    السرعة
+                  </label>
                   <Input
                     type="number"
                     value={audioSpeed}
@@ -413,19 +422,16 @@ export default function ContentGeneratorPanel({
 
               <Button
                 onClick={handleGenerateAudio}
-                disabled={generationStatus === 'generating'}
-                className="w-full bg-cyan-600 hover:bg-cyan-700 gap-2"
+                disabled={isGenerating}
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
               >
-                {generationStatus === 'generating' ? (
+                {isGenerating ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     جاري الإنشاء...
                   </>
                 ) : (
-                  <>
-                    <Volume2 className="w-4 h-4" />
-                    إنشاء صوت
-                  </>
+                  'إنشاء صوت'
                 )}
               </Button>
             </div>
@@ -433,62 +439,11 @@ export default function ContentGeneratorPanel({
         </TabsContent>
       </Tabs>
 
-      {/* Generation Progress */}
-      {generationStatus === 'generating' && (
-        <Card className="p-4 bg-slate-700/50 border-cyan-500/20 space-y-3">
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-            <p className="text-slate-200">جاري معالجة المحتوى...</p>
-          </div>
-          <div className="w-full bg-slate-600 rounded-full h-2 overflow-hidden">
-            <div
-              className="bg-cyan-500 h-full transition-all duration-300"
-              style={{ width: `${generationProgress}%` }}
-            />
-          </div>
-          <p className="text-xs text-slate-400">{generationProgress}%</p>
-        </Card>
-      )}
-
-      {/* Completion Status */}
-      {generationStatus === 'completed' && previewUrl && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-green-400">
-            <CheckCircle2 className="w-5 h-5" />
-            <p className="font-medium">تم إنشاء المحتوى بنجاح!</p>
-          </div>
-
-          <AdvancedPreviewDownload
-            type={activeTab as 'video' | 'image' | 'audio'}
-            url={previewUrl}
-            title={`${activeTab === 'video' ? 'فيديو' : activeTab === 'image' ? 'صورة' : 'صوت'} - ${new Date().toLocaleString('ar-SA')}`}
-            size={1024000}
-            duration={activeTab === 'video' ? videoDuration : activeTab === 'audio' ? Math.floor(audioText.length / 10) : imageDuration}
-            format={activeTab === 'video' ? 'mp4' : activeTab === 'image' ? 'jpg' : 'mp3'}
-          />
-
-          <Button
-            onClick={() => {
-              setGenerationStatus('idle');
-              setPreviewUrl(null);
-              setGenerationId(null);
-            }}
-            variant="outline"
-            className="w-full"
-          >
-            إنشاء محتوى جديد
-          </Button>
-        </div>
-      )}
-
-      {/* Error Status */}
-      {generationStatus === 'error' && (
+      {/* Error Display */}
+      {generationError && (
         <Card className="p-4 bg-red-900/30 border-red-500/30 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          <div>
-            <p className="font-medium text-red-400">حدث خطأ في المعالجة</p>
-            <p className="text-sm text-red-300">يرجى المحاولة مرة أخرى</p>
-          </div>
+          <AlertCircle className="w-5 h-5 text-red-400" />
+          <p className="text-red-300">{generationError}</p>
         </Card>
       )}
     </div>

@@ -29,19 +29,10 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import SceneGallery from '@/components/SceneGallery';
 import AdvancedPreviewDownload from '@/components/AdvancedPreviewDownload';
+import type { Scene } from '@/types/media';
 
 interface IntegratedMediaStudioProps {
   projectId: number;
-}
-
-interface Scene {
-  id: string;
-  title: string;
-  description: string;
-  duration: number;
-  videoUrl: string;
-  thumbnail: string;
-  createdAt: Date;
 }
 
 interface MediaConfig {
@@ -150,9 +141,8 @@ export default function IntegratedMediaStudio({
           description: activeTab === 'video' ? videoText : activeTab === 'audio' ? audioText : 'صور متحركة',
           duration: config.duration,
           videoUrl: resultUrl,
+          thumbnail: resultUrl,
           createdAt: new Date(),
-          
-          
         };
 
         setCreatedScenes((prev: any) => [...prev, newScene]);
