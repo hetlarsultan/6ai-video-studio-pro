@@ -9,8 +9,8 @@ import VisualEffectEditor from '@/components/VisualEffectEditor';
 import AdvancedVideoPlayer from '@/components/AdvancedVideoPlayer';
 import SharingDialog from '@/components/SharingDialog';
 import ExportModal from '@/components/ExportModal';
-import ContentGeneratorPanel from '@/components/ContentGeneratorPanel';
 import IntegratedMediaStudio from '@/components/IntegratedMediaStudio';
+import LocalMediaPreview from '@/components/LocalMediaPreview';
 import { VideoEditorProvider, useVideoEditor } from '@/contexts/VideoEditorContext';
 import { toast } from 'sonner';
 
@@ -114,8 +114,8 @@ function VideoEditorContent() {
           {/* Content Generator Tab */}
           <TabsContent value="generator" className="space-y-6">
             <Card className="p-6 bg-slate-800/50 border-cyan-500/20">
-              <h2 className="text-xl font-semibold mb-4">توليد المحتوى (فيديو/صور/صوت)</h2>
-              <ContentGeneratorPanel projectId={1} />
+              <h2 className="text-xl font-semibold mb-4">توليد المحتوى (فيديو/صور/صوت) - معالجة محلية مجاني 100%</h2>
+              <IntegratedMediaStudio projectId={1} />
             </Card>
           </TabsContent>
 
