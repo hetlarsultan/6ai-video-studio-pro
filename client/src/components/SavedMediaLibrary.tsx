@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import MediaPreviewModal from './MediaPreviewModal';
+import AdvancedFilters, { FilterOptions } from './AdvancedFilters';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,12 +54,17 @@ interface SavedMediaLibraryProps {
 
 export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState<'all' | 'video' | 'image' | 'audio'>('all');
-  const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'largest'>('recent');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [starredOnly, setStarredOnly] = useState(false);
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterOptions>({
+    types: ['video', 'image', 'audio'],
+    sortBy: 'recent',
+    dateRange: { from: null, to: null },
+    sizeRange: { min: 0, max: 1000 },
+    quality: 'all',
+    hasAudio: undefined,
+  });
 
   // بيانات تجريبية
   const mockFiles: MediaFile[] = [
@@ -118,28 +124,48 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
   const filteredFiles = useMemo(() => {
     let result = mockFiles;
 
-    // فلتر حسب النوع
-    if (selectedType !== 'all') {
-      result = result.filter((f) => f.type === selectedType);
-    }
-
-    // فلتر حسب البحث
+    // البحث
     if (searchQuery) {
       result = result.filter((f) =>
         f.title.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // فلتر المفضلة
-    if (starredOnly) {
-      result = result.filter((f) => f.isStarred);
+    // النوع
+    if (filters.types.length > 0 && filters.types.length < 3) {
+      result = result.filter((f) => filters.types.includes(f.type as any));
     }
 
+    // نطاق التاريخ
+    if (filters.dateRange.from || filters.dateRange.to) {
+      result = result.filter((f) => {
+        const fileDate = new Date(f.createdAt);
+        if (filters.dateRange.from && fileDate < filters.dateRange.from)
+          return false;
+        if (filters.dateRange.to && fileDate > filters.dateRange.to)
+          return false;
+        return true;
+      });
+    }
+
+    // نطاق الحجم
+    result = result.filter(
+      (f) =>
+        f.size >= filters.sizeRange.min * 1024 * 1024 &&
+        f.size <= filters.sizeRange.max * 1024 * 1024
+    );
+
     // الترتيب
-    if (sortBy === 'popular') {
+    if (filters.sortBy === 'popular') {
       result = result.sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0));
-    } else if (sortBy === 'largest') {
+    } else if (filters.sortBy === 'largest') {
       result = result.sort((a, b) => b.size - a.size);
+    } else if (filters.sortBy === 'smallest') {
+      result = result.sort((a, b) => a.size - b.size);
+    } else if (filters.sortBy === 'oldest') {
+      result = result.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
     } else {
       result = result.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -147,7 +173,7 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
     }
 
     return result;
-  }, [searchQuery, selectedType, sortBy, starredOnly]);
+  }, [searchQuery, filters]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -217,8 +243,24 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
 
   return (
     <div className="w-full space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Advanced Filters */}
+      <AdvancedFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        onReset={() =>
+          setFilters({
+            types: ['video', 'image', 'audio'],
+            sortBy: 'recent',
+            dateRange: { from: null, to: null },
+            sizeRange: { min: 0, max: 1000 },
+            quality: 'all',
+            hasAudio: undefined,
+          })
+        }
+      />
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold text-cyan-400">مكتبة الملفات المحفوظة</h2>
           <p className="text-sm text-slate-400 mt-1">
@@ -240,9 +282,9 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
             />
           </div>
           <Button
-            variant={starredOnly ? 'default' : 'outline'}
+            variant="outline"
             size="icon"
-            onClick={() => setStarredOnly(!starredOnly)}
+            onClick={() => toast.info('سيتم إضافة هذه الميزة قريباً')}
             title="المفضلة"
           >
             <Star className="w-4 h-4" />
@@ -265,7 +307,7 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
 
         {/* Tabs and Sort */}
         <div className="flex items-center justify-between">
-          <Tabs value={selectedType} onValueChange={(v: any) => setSelectedType(v)}>
+          <Tabs value={filters.types[0]} onValueChange={(v: any) => setFilters(v)}>
             <TabsList className="bg-slate-800/50">
               <TabsTrigger value="all">الكل</TabsTrigger>
               <TabsTrigger value="video">فيديو</TabsTrigger>
@@ -283,20 +325,20 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
               <DropdownMenuItem
-                onClick={() => setSortBy('recent')}
-                className={sortBy === 'recent' ? 'bg-cyan-500/20' : ''}
+                onClick={() => setFilters({ ...filters, sortBy: 'recent' })}
+                className={filters.sortBy === 'recent' ? 'bg-cyan-500/20' : ''}
               >
                 الأحدث أولاً
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => setSortBy('popular')}
-                className={sortBy === 'popular' ? 'bg-cyan-500/20' : ''}
+                onClick={() => setFilters({ ...filters, sortBy: 'popular' })}
+                className={filters.sortBy === 'popular' ? 'bg-cyan-500/20' : ''}
               >
                 الأكثر تنزيلاً
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => setSortBy('largest')}
-                className={sortBy === 'largest' ? 'bg-cyan-500/20' : ''}
+                onClick={() => setFilters({ ...filters, sortBy: 'largest' })}
+                className={filters.sortBy === 'largest' ? 'bg-cyan-500/20' : ''}
               >
                 الأكبر حجماً
               </DropdownMenuItem>
