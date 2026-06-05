@@ -25,6 +25,7 @@ import {
   Music,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import MediaPreviewModal from './MediaPreviewModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +43,7 @@ interface MediaFile {
   duration?: number;
   thumbnail?: string;
   createdAt: Date;
-  downloadCount: number;
+  downloadCount?: number;
   isStarred?: boolean;
 }
 
@@ -56,6 +57,8 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'largest'>('recent');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [starredOnly, setStarredOnly] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   // بيانات تجريبية
   const mockFiles: MediaFile[] = [
@@ -134,7 +137,7 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
 
     // الترتيب
     if (sortBy === 'popular') {
-      result = result.sort((a, b) => b.downloadCount - a.downloadCount);
+      result = result.sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0));
     } else if (sortBy === 'largest') {
       result = result.sort((a, b) => b.size - a.size);
     } else {
@@ -182,8 +185,8 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
   };
 
   const handlePreview = (file: MediaFile) => {
-    toast.info(`معاينة ${file.title}`);
-    // في التطبيق الفعلي، سيتم فتح نافذة معاينة
+    setSelectedFile(file);
+    setIsPreviewOpen(true);
   };
 
   const getTypeIcon = (type: string) => {
@@ -493,6 +496,15 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
         )}
       </div>
 
+      {/* Preview Modal */}
+      <MediaPreviewModal
+        isOpen={isPreviewOpen}
+        file={selectedFile}
+        onClose={() => setIsPreviewOpen(false)}
+        onDownload={handleDownload}
+        onShare={handleShare}
+      />
+
       {/* Statistics */}
       {filteredFiles.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -511,7 +523,7 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
           <Card className="p-4 bg-slate-800/50 border-slate-700">
             <div className="text-sm text-slate-400">إجمالي التنزيلات</div>
             <div className="text-2xl font-bold text-cyan-400 mt-1">
-              {filteredFiles.reduce((sum, f) => sum + f.downloadCount, 0)}
+              {filteredFiles.reduce((sum, f) => sum + (f.downloadCount || 0), 0)}
             </div>
           </Card>
           <Card className="p-4 bg-slate-800/50 border-slate-700">
