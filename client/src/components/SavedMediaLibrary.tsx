@@ -541,7 +541,7 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
                   </div>
                 </div>
               </Card>
-            ))}
+            );}
           </div>
         ) : (
           // List View
@@ -620,7 +620,7 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
                   </div>
                 </div>
               </Card>
-            ))}
+            );}
           </div>
         )}
       </div>
