@@ -21,10 +21,11 @@ import {
   Grid,
   List as ListIcon,
   Clock,
-  HardDrive,
   Play,
   Image as ImageIcon,
   Music,
+  Check,
+  HardDrive,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import MediaPreviewModal from './MediaPreviewModal';
@@ -59,6 +60,7 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<FilterOptions>({
     types: ['video', 'image', 'audio'],
     sortBy: 'recent',
@@ -177,6 +179,61 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
     return result;
   }, [searchQuery, filters]);
 
+  // التحديد المتعدد للملفات
+  const toggleFileSelection = (fileId: string) => {
+    const newSelected = new Set(selectedFiles);
+    if (newSelected.has(fileId)) {
+      newSelected.delete(fileId);
+    } else {
+      newSelected.add(fileId);
+    }
+    setSelectedFiles(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFiles.size === filteredFiles.length) {
+      setSelectedFiles(new Set());
+    } else {
+      setSelectedFiles(new Set(filteredFiles.map((f) => f.id.toString())));
+    }
+  };
+
+  const getTotalSize = () => {
+    let total = 0;
+    selectedFiles.forEach((id) => {
+      const file = mockFiles.find((f) => f.id.toString() === id);
+      if (file) total += file.size;
+    });
+    return total;
+  };
+
+  const handleBatchDownload = () => {
+    if (selectedFiles.size === 0) {
+      toast.error('يرجى تحديد ملفات للتنزيل');
+      return;
+    }
+
+    selectedFiles.forEach((id) => {
+      const file = mockFiles.find((f) => f.id.toString() === id);
+      if (file) {
+        handleDownload(file);
+      }
+    });
+
+    toast.success(`تم تنزيل ${selectedFiles.size} ملفات`);
+    setSelectedFiles(new Set());
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedFiles.size === 0) {
+      toast.error('يرجى تحديد ملفات للحذف');
+      return;
+    }
+
+    toast.success(`تم حذف ${selectedFiles.size} ملفات`);
+    setSelectedFiles(new Set());
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -283,13 +340,37 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
               className="pl-10 bg-slate-800/50 border-slate-700"
             />
           </div>
+          {selectedFiles.size > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+              <span className="text-sm text-cyan-400">
+                تم تحديد {selectedFiles.size} ملف ({formatFileSize(getTotalSize())})
+              </span>
+              <Button
+                size="sm"
+                onClick={handleBatchDownload}
+                className="bg-cyan-500 hover:bg-cyan-600 gap-1"
+              >
+                <Download className="w-4 h-4" />
+                تنزيل
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleBatchDelete}
+                className="text-red-400 hover:text-red-300 gap-1"
+              >
+                <Trash2 className="w-4 h-4" />
+                حذف
+              </Button>
+            </div>
+          )}
           <Button
-            variant="outline"
+            variant={selectedFiles.size === filteredFiles.length && filteredFiles.length > 0 ? 'default' : 'outline'}
             size="icon"
-            onClick={() => toast.info('سيتم إضافة هذه الميزة قريباً')}
-            title="المفضلة"
+            onClick={toggleSelectAll}
+            title={selectedFiles.size === filteredFiles.length ? 'إلغاء التحديد' : 'تحديد الكل'}
           >
-            <Star className="w-4 h-4" />
+            <Check className="w-4 h-4" />
           </Button>
           <Button
             variant={viewMode === 'grid' ? 'default' : 'outline'}
@@ -358,7 +439,9 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
         ) : viewMode === 'grid' ? (
           // Grid View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredFiles.map((file) => (
+            {filteredFiles.map((file) => {
+              const isSelected = selectedFiles.has(file.id.toString());
+              return (
               <Card
                 key={file.id}
                 className="bg-slate-800/50 border-slate-700 overflow-hidden hover:border-cyan-500/50 transition-all"
@@ -463,7 +546,9 @@ export default function SavedMediaLibrary({ projectId }: SavedMediaLibraryProps)
         ) : (
           // List View
           <div className="space-y-2">
-            {filteredFiles.map((file) => (
+            {filteredFiles.map((file) => {
+              const isSelected = selectedFiles.has(file.id.toString());
+              return (
               <Card
                 key={file.id}
                 className="bg-slate-800/50 border-slate-700 p-4 hover:border-cyan-500/50 transition-all"
